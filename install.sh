@@ -35,8 +35,20 @@ echo "✅ สร้างไฟล์ .env เรียบร้อย"
 echo "📦 ติดตั้ง dependencies..."
 npm install
 
-# STEP 4: Run node index.js แบบ background
-echo "🚀 เริ่มรัน Print Monitor แบบ background..."
-nohup node index.js > print-monitor.log 2>&1 &
+# STEP 4: ติดตั้ง PM2 ถ้ายังไม่มี
+if ! command -v pm2 &> /dev/null; then
+    echo "🚧 กำลังติดตั้ง pm2..."
+    sudo npm install -g pm2
+fi
 
-echo "✅ ติดตั้งเสร็จสิ้น! คุณสามารถดู log ได้ที่ print-monitor.log"
+# STEP 5: สั่งรันด้วย pm2
+echo "🚀 รันแอปด้วย pm2..."
+pm2 start index.js --name print-monitor --env production
+
+# STEP 6: ตั้งให้ pm2 auto-restart หลังบูตเครื่อง
+pm2 startup systemd -u $USER --hp $HOME | bash
+pm2 save
+
+echo "🎉 ติดตั้งเสร็จสิ้น! แอปกำลังรันอยู่ 🎯"
+echo "📊 ตรวจสอบสถานะ: pm2 status"
+echo "📜 ดู log: pm2 logs print-monitor"
