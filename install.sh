@@ -2,35 +2,41 @@
 
 echo "🛠️ เริ่มติดตั้ง Print Monitor..."
 
-# 🧱 STEP 1: Clone โปรเจกต์จาก GitHub
-read -p "📦 ใส่ URL GitHub Repository (HTTPS): " GIT_REPO
-git clone "$GIT_REPO" print-monitor
-cd print-monitor || { echo "❌ ไม่พบโฟลเดอร์ print-monitor"; exit 1; }
-
-# 🧾 STEP 2: รับค่าจากผู้ใช้เพื่อสร้างไฟล์ .env
-echo "🌐 กำหนดค่าเชื่อมต่อกับ CUPS Server"
-read -p "🖨️ IP หรือ URL ของ CUPS Server (เช่น http://192.168.1.100:631): " cups_url
-read -p "🌐 PORT ของ Node.js ที่ต้องการรัน (default 3000): " port
-
-# ถ้ายังไม่พิมพ์ port ให้ใช้ 3000
-if [ -z "$port" ]; then
-  port=3000
+# STEP 0: ตรวจสอบ Node.js
+if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+    echo "🚧 ไม่พบ Node.js หรือ npm กำลังติดตั้ง..."
+    sudo apt update
+    sudo apt install -y nodejs npm
+else
+    echo "✅ พบ Node.js และ npm แล้ว"
 fi
 
-# ✍️ สร้างไฟล์ .env
-cat <<EOF > .env
-PORT=$port
-CUPS_SERVER=$cups_url
-EOF
+# STEP 1: Clone GitHub repo
+if [ ! -d "print-monitor" ]; then
+  git clone https://github.com/tehasome/print-server.git print-monitor
+else
+  echo "📁 โฟลเดอร์ print-monitor มีอยู่แล้ว"
+fi
 
+cd print-monitor || { echo "❌ ไม่พบโฟลเดอร์ print-monitor"; exit 1; }
+
+# STEP 2: รับค่าเพื่อสร้างไฟล์ .env
+echo "🌐 กำหนดค่า Webhook URL"
+read -p "Webhook URL (เช่น http://your-laravel-server.com/api/printer-status-update): " WEBHOOK_URL
+read -p "WEBHOOK_API_KEY: " WEBHOOK_API_KEY
+
+cat <<EOF > .env
+WEBHOOK_URL=$WEBHOOK_URL
+WEBHOOK_API_KEY=$WEBHOOK_API_KEY
+EOF
 echo "✅ สร้างไฟล์ .env เรียบร้อย"
 
-# 🐳 STEP 3: Build Docker container
-echo "⚙️ สร้าง Docker image..."
-docker build -t print-monitor .
+# STEP 3: ติดตั้ง dependencies
+echo "📦 ติดตั้ง dependencies..."
+npm install
 
-# 🏃 STEP 4: Run Container
-echo "🚀 เริ่มรัน Print Monitor บน port $port ..."
-docker run -d --name print-monitor -p $port:$port --env-file .env print-monitor
+# STEP 4: Run node index.js แบบ background
+echo "🚀 เริ่มรัน Print Monitor แบบ background..."
+nohup node index.js > print-monitor.log 2>&1 &
 
-echo "🎉 ติดตั้งเสร็จสมบูรณ์! เปิดใช้งานที่ http://localhost:$port/jobs"
+echo "✅ ติดตั้งเสร็จสิ้น! คุณสามารถดู log ได้ที่ print-monitor.log"
