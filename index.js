@@ -9,7 +9,7 @@ const redis = new Redis({
     port: process.env.REDIS_PORT || 6379
 });
 
-const WEBHOOK_URL = process.env.WEBHOOK_URL || "http://your-laravel-server.com/api/printer-status-update";
+const WEBHOOK_URL = process.env.WEBHOOK_URL || "http://your-laravel-server.com/api/scan/printer-status";
 const API_KEY = process.env.WEBHOOK_API_KEY;
 
 async function checkPrintJobs() {
